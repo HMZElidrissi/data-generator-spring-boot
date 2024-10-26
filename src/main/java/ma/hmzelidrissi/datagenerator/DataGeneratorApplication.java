@@ -2,6 +2,7 @@ package ma.hmzelidrissi.datagenerator;
 
 import ma.hmzelidrissi.datagenerator.enums.*;
 import com.github.javafaker.Faker;
+import org.mindrot.jbcrypt.BCrypt;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -21,10 +22,10 @@ public class DataGeneratorApplication implements CommandLineRunner {
   private final Random random = new Random();
 
   private static final int TOTAL_USERS = 1000000; // 1 million users
-  private static final int ACCOUNTS_PER_USER = 2;  // 2 million accounts
+  private static final int ACCOUNTS_PER_USER = 2; // 2 million accounts
   private static final int TRANSACTIONS_PER_ACCOUNT = 6; // 12 million transactions
-  private static final int INVOICES_PER_USER = 1;  // 1 million invoices
-  private static final int LOANS_PER_USER = 1;     // 1 million loans
+  private static final int INVOICES_PER_USER = 1; // 1 million invoices
+  private static final int LOANS_PER_USER = 1; // 1 million loans
 
   @Value("${generator.output.file}")
   private String OUTPUT_FILE;
@@ -60,7 +61,8 @@ public class DataGeneratorApplication implements CommandLineRunner {
 
   private void writeSchemaCreation(BufferedWriter writer) throws IOException {
     log.info("Writing schema creation statements...");
-    writer.write("""
+    writer.write(
+        """
             -- Drop existing tables
             DROP TABLE IF EXISTS transactions;
             DROP TABLE IF EXISTS loans;
@@ -72,6 +74,8 @@ public class DataGeneratorApplication implements CommandLineRunner {
             CREATE TABLE users (
                 id BIGINT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
                 age INT NOT NULL,
                 monthly_income DOUBLE NOT NULL,
                 credit_score INT NOT NULL,
@@ -148,16 +152,18 @@ public class DataGeneratorApplication implements CommandLineRunner {
       userIds.add(i);
 
       String name = faker.name().fullName().replace("'", "''");
+      String email = faker.internet().emailAddress();
+      String password = BCrypt.hashpw("password", BCrypt.gensalt());
       int age = random.nextInt(18, 80);
       double monthlyIncome = random.nextDouble() * 150000 + 30000;
       int creditScore = random.nextInt(300, 850);
       Role role = Role.values()[random.nextInt(Role.values().length)];
 
-      batch.append(String.format(
-              "INSERT INTO users (id, name, age, monthly_income, credit_score, role) " +
-                      "VALUES (%d, '%s', %d, %.2f, %d, '%s');%s",
-              i, name, age, monthlyIncome, creditScore, role, NEW_LINE
-      ));
+      batch.append(
+          String.format(
+              "INSERT INTO users (id, name, email, password, age, monthly_income, credit_score, role) "
+                  + "VALUES (%d, '%s', '%s', '%s', %d, %.2f, %d, '%s');%s",
+              i, name, email, password, age, monthlyIncome, creditScore, role, NEW_LINE));
 
       if (++count >= BATCH_SIZE) {
         writer.write(batch.toString());
@@ -175,7 +181,8 @@ public class DataGeneratorApplication implements CommandLineRunner {
     return userIds;
   }
 
-  private Map<Long, List<Long>> generateAccounts(BufferedWriter writer, List<Long> userIds) throws IOException {
+  private Map<Long, List<Long>> generateAccounts(BufferedWriter writer, List<Long> userIds)
+      throws IOException {
     log.info("Generating accounts for {} users...", userIds.size());
     Map<Long, List<Long>> userAccounts = new HashMap<>();
     StringBuilder batch = new StringBuilder();
@@ -188,13 +195,14 @@ public class DataGeneratorApplication implements CommandLineRunner {
         accounts.add(accountId);
 
         double balance = random.nextDouble() * 50000 + 1000;
-        AccountStatus status = AccountStatus.values()[random.nextInt(AccountStatus.values().length)];
+        AccountStatus status =
+            AccountStatus.values()[random.nextInt(AccountStatus.values().length)];
 
-        batch.append(String.format(
-                "INSERT INTO accounts (id, balance, status, user_id) " +
-                        "VALUES (%d, %.2f, '%s', %d);%s",
-                accountId, balance, status, userId, NEW_LINE
-        ));
+        batch.append(
+            String.format(
+                "INSERT INTO accounts (id, balance, status, user_id) "
+                    + "VALUES (%d, %.2f, '%s', %d);%s",
+                accountId, balance, status, userId, NEW_LINE));
 
         if (++count >= BATCH_SIZE) {
           writer.write(batch.toString());
@@ -216,14 +224,13 @@ public class DataGeneratorApplication implements CommandLineRunner {
     return userAccounts;
   }
 
-  private void generateTransactions(BufferedWriter writer, Map<Long, List<Long>> userAccounts) throws IOException {
+  private void generateTransactions(BufferedWriter writer, Map<Long, List<Long>> userAccounts)
+      throws IOException {
     log.info("Generating transactions...");
     StringBuilder batch = new StringBuilder();
     int count = 0;
     long transactionId = 1;
-    List<Long> allAccountIds = userAccounts.values().stream()
-            .flatMap(List::stream)
-            .toList();
+    List<Long> allAccountIds = userAccounts.values().stream().flatMap(List::stream).toList();
 
     for (List<Long> accounts : userAccounts.values()) {
       for (Long sourceAccountId : accounts) {
@@ -233,15 +240,23 @@ public class DataGeneratorApplication implements CommandLineRunner {
             destinationAccountId = allAccountIds.get(random.nextInt(allAccountIds.size()));
           }
 
-          TransactionType type = TransactionType.values()[random.nextInt(TransactionType.values().length)];
+          TransactionType type =
+              TransactionType.values()[random.nextInt(TransactionType.values().length)];
           double amount = random.nextDouble() * 1000 + 10;
-          TransactionStatus status = TransactionStatus.values()[random.nextInt(TransactionStatus.values().length)];
+          TransactionStatus status =
+              TransactionStatus.values()[random.nextInt(TransactionStatus.values().length)];
 
-          batch.append(String.format(
-                  "INSERT INTO transactions (id, type, amount, source_account_id, destination_account_id, status) " +
-                          "VALUES (%d, '%s', %.2f, %d, %d, '%s');%s",
-                  transactionId++, type, amount, sourceAccountId, destinationAccountId, status, NEW_LINE
-          ));
+          batch.append(
+              String.format(
+                  "INSERT INTO transactions (id, type, amount, source_account_id, destination_account_id, status) "
+                      + "VALUES (%d, '%s', %.2f, %d, %d, '%s');%s",
+                  transactionId++,
+                  type,
+                  amount,
+                  sourceAccountId,
+                  destinationAccountId,
+                  status,
+                  NEW_LINE));
 
           if (++count >= BATCH_SIZE) {
             writer.write(batch.toString());
@@ -271,11 +286,11 @@ public class DataGeneratorApplication implements CommandLineRunner {
         double amountDue = random.nextDouble() * 5000 + 100;
         LocalDate dueDate = LocalDate.now().plusDays(random.nextInt(365));
 
-        batch.append(String.format(
-                "INSERT INTO invoices (id, amount_due, due_date, user_id) " +
-                        "VALUES (%d, %.2f, '%s', %d);%s",
-                invoiceId++, amountDue, dueDate, userId, NEW_LINE
-        ));
+        batch.append(
+            String.format(
+                "INSERT INTO invoices (id, amount_due, due_date, user_id) "
+                    + "VALUES (%d, %.2f, '%s', %d);%s",
+                invoiceId++, amountDue, dueDate, userId, NEW_LINE));
 
         if (++count >= BATCH_SIZE) {
           writer.write(batch.toString());
@@ -306,11 +321,11 @@ public class DataGeneratorApplication implements CommandLineRunner {
         int termMonths = random.nextInt(12, 360);
         boolean approved = random.nextBoolean();
 
-        batch.append(String.format(
-                "INSERT INTO loans (id, principal, interest_rate, term_months, user_id, approved) " +
-                        "VALUES (%d, %.2f, %.2f, %d, %d, %b);%s",
-                loanId++, principal, interestRate, termMonths, userId, approved, NEW_LINE
-        ));
+        batch.append(
+            String.format(
+                "INSERT INTO loans (id, principal, interest_rate, term_months, user_id, approved) "
+                    + "VALUES (%d, %.2f, %.2f, %d, %d, %b);%s",
+                loanId++, principal, interestRate, termMonths, userId, approved, NEW_LINE));
 
         if (++count >= BATCH_SIZE) {
           writer.write(batch.toString());
