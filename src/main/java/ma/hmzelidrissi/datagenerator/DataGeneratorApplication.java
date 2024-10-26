@@ -147,13 +147,13 @@ public class DataGeneratorApplication implements CommandLineRunner {
     List<Long> userIds = new ArrayList<>();
     StringBuilder batch = new StringBuilder();
     int count = 0;
+    String password = BCrypt.hashpw("password", BCrypt.gensalt());
 
     for (long i = 1; i <= TOTAL_USERS; i++) {
       userIds.add(i);
 
       String name = faker.name().fullName().replace("'", "''");
       String email = faker.internet().emailAddress();
-      String password = BCrypt.hashpw("password", BCrypt.gensalt());
       int age = random.nextInt(18, 80);
       double monthlyIncome = random.nextDouble() * 150000 + 30000;
       int creditScore = random.nextInt(300, 850);
