@@ -33,9 +33,20 @@ User (1M rows)
 The application can be configured through `application.properties`:
 
 ```properties
-logging.level.com.banking.datagenerator=INFO
+# Choose generator type: 'db' for direct database insertion or 'file' for SQL file generation
+generator.type=db
+
+# Database Configuration (for db generator)
+spring.datasource.url=jdbc:postgresql://localhost:5432/bankingdb
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+
+# File Configuration (for file generator)
+generator.output.file=banking_data.sql
+
+# Logging Configuration
+logging.level.ma.hmzelidrissi.datagenerator=INFO
 logging.pattern.console=%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
-generator.output.file=data.sql
 ```
 
 ## Running the Application
@@ -43,12 +54,17 @@ generator.output.file=data.sql
 ### Using IntelliJ IDEA:
 1. Open the project in IntelliJ IDEA
 2. Wait for Maven to download dependencies
-3. Right-click on `DataGeneratorApplication.java`
-4. Select "Run 'DataGeneratorApplication'"
+3. Configure database connection in `application.properties`
+4. Right-click on `DataGeneratorApplication.java`
+5. Select "Run 'DataGeneratorApplication'"
 
 ### Using Maven:
 ```bash
-./mvnw spring-boot:run
+# For database generator
+./mvnw spring-boot:run -Dgenerator.type=db
+
+# For file generator
+./mvnw spring-boot:run -Dgenerator.type=file
 ```
 
 ## Generated Data Specifications
