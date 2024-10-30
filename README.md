@@ -114,14 +114,33 @@ The generated SQL file includes:
 3. Appropriate indexes for better query performance
 4. Data insertion statements in batches
 
-## Importing Data
-
-To import the generated data:
+## Creating a PostgreSQL Database
 
 ```bash
-# MySQL
-mysql -u username -p database_name < data.sql
-
-# PostgreSQL
-psql -U username -d database_name -f data.sql
+docker run -d \
+  --name banking-postgres \
+  --restart unless-stopped \
+  -e POSTGRES_DB=bankingdb \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -v pgdata:/var/lib/postgresql/data \
+  -p 5432:5432 \
+  postgres:17 \
+  postgres \
+    -c shared_buffers=2GB \
+    -c work_mem=32MB \
+    -c maintenance_work_mem=512MB \
+    -c max_connections=100 \
+    -c effective_cache_size=6GB \
+    -c max_wal_size=4GB \
+    -c min_wal_size=2GB
 ```
+
+### PostgreSQL Configuration Parameters
+- `shared_buffers`: Memory allocated for caching data
+- `work_mem`: Memory allocated for each operation
+- `maintenance_work_mem`: Memory allocated for maintenance operations
+- `max_connections`: Maximum number of connections
+- `effective_cache_size`: Total memory available for caching data
+- `max_wal_size`: Maximum size of write-ahead log
+- `min_wal_size`: Minimum size of write-ahead log

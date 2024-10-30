@@ -25,11 +25,11 @@ public class PostgreSQLDataGenerator implements CommandLineRunner {
     private final Faker faker = new Faker();
     private final Random random = new Random();
 
-    private static final int TOTAL_USERS = 3_000_000;
-    private static final int ACCOUNTS_PER_USER = 2;
-    private static final int TRANSACTIONS_PER_ACCOUNT = 6;
-    private static final int INVOICES_PER_USER = 2;
-    private static final int LOANS_PER_USER = 2;
+    private static final int TOTAL_USERS = 3_000_000; // 3 million
+    private static final int ACCOUNTS_PER_USER = 2; // 6 million accounts
+    private static final int TRANSACTIONS_PER_ACCOUNT = 6; // 36 million transactions
+    private static final int INVOICES_PER_USER = 2; // 6 million invoices
+    private static final int LOANS_PER_USER = 2; // 6 million loans
     private static final int BATCH_SIZE = 1000;
 
     private final PlatformTransactionManager transactionManager;
@@ -44,20 +44,20 @@ public class PostgreSQLDataGenerator implements CommandLineRunner {
         try {
             createTables();
 
-            transactionTemplate.execute(status -> {
-                try {
+//            transactionTemplate.execute(status -> {
+//                try {
                     List<Long> userIds = generateUsers();
                     Map<Long, List<Long>> userAccounts = generateAccounts(userIds);
                     generateTransactions(userAccounts);
                     generateInvoices(userIds);
                     generateLoans(userIds);
-                    return null;
-                } catch (Exception e) {
-                    log.error("Error during data generation", e);
-                    status.setRollbackOnly();
-                    throw new RuntimeException("Failed to generate data", e);
-                }
-            });
+//                    return null;
+//                } catch (Exception e) {
+//                    log.error("Error during data generation", e);
+//                    status.setRollbackOnly();
+//                    throw new RuntimeException("Failed to generate data", e);
+//                }
+//            });
 
             createIndexes();
 
