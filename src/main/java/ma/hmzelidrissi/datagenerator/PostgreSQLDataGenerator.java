@@ -7,7 +7,9 @@ import ma.hmzelidrissi.datagenerator.enums.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -29,19 +31,33 @@ public class PostgreSQLDataGenerator implements CommandLineRunner {
     private static final int LOANS_PER_USER = 2;
     private static final int BATCH_SIZE = 1000;
 
+    private final PlatformTransactionManager transactionManager;
+
     @Override
-    @Transactional
     public void run(String... args) {
         log.info("Starting PostgreSQL direct data generation...");
         long startTime = System.currentTimeMillis();
 
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+
         try {
             createTables();
-            List<Long> userIds = generateUsers();
-            Map<Long, List<Long>> userAccounts = generateAccounts(userIds);
-            generateTransactions(userAccounts);
-            generateInvoices(userIds);
-            generateLoans(userIds);
+
+            transactionTemplate.execute(status -> {
+                try {
+                    List<Long> userIds = generateUsers();
+                    Map<Long, List<Long>> userAccounts = generateAccounts(userIds);
+                    generateTransactions(userAccounts);
+                    generateInvoices(userIds);
+                    generateLoans(userIds);
+                    return null;
+                } catch (Exception e) {
+                    log.error("Error during data generation", e);
+                    status.setRollbackOnly();
+                    throw new RuntimeException("Failed to generate data", e);
+                }
+            });
+
             createIndexes();
 
             long endTime = System.currentTimeMillis();
@@ -51,6 +67,7 @@ public class PostgreSQLDataGenerator implements CommandLineRunner {
             throw new RuntimeException("Failed to generate data", e);
         }
     }
+
 
     private void createTables() {
         log.info("Creating tables...");
