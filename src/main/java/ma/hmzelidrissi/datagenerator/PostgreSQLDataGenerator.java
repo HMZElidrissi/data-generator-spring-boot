@@ -4,6 +4,7 @@ import com.github.javafaker.Faker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.hmzelidrissi.datagenerator.enums.*;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -132,13 +133,13 @@ public class PostgreSQLDataGenerator implements CommandLineRunner {
         log.info("Generating {} users...", TOTAL_USERS);
         List<Long> userIds = new ArrayList<>();
         List<Object[]> batchArgs = new ArrayList<>();
-        String hashedPassword = "$2a$10$0Pp2F39K/SwPJ9tmSNzk8.FWukmZTdGE/BiS4tXJ5QNSXGQTWdHY2";
+        String hashedPassword = BCrypt.hashpw("password", BCrypt.gensalt());
 
         for (long i = 1; i <= TOTAL_USERS; i++) {
             userIds.add(i);
             Object[] userData = new Object[]{
                     faker.name().fullName(),
-                    String.format("user%d@example.com", i),
+                    faker.internet().emailAddress().replaceAll("@", i + "@"),
                     hashedPassword,
                     random.nextInt(18, 80),
                     random.nextDouble() * 150000 + 30000,
